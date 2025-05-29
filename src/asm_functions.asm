@@ -128,11 +128,3 @@ procesarPixel:
     pop r12
     pop rbx
     ret
-
-valorRGBlineal:
-    ; ...
-    ret
-
-valorYcomprimido:
-    ; ...
-    ret
