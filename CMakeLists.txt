@@ -7,10 +7,10 @@ set(CMAKE_ASM_NASM_FLAGS "-g -F dwarf")
 
 # fuentes
 set(SOURCES
-    src/display_image.cpp
-    src/procesarImagen.asm
-    src/valorRGBLineal.asm
-    src/valorYComprimido.asm
+    displayImage.cpp
+    # src/procesarImagen.asm
+    valorRGBLineal.asm
+    valorYComprimido.asm
 )
 
 # buscar OpenCV
@@ -22,6 +22,7 @@ include_directories(
 
 # ejecutable principal
 add_executable(ImageProcessor ${SOURCES})
+set_target_properties(ImageProcessor PROPERTIES LINK_FLAGS "-no-pie")
 
 # enlazar librerías
 target_link_libraries(ImageProcessor
