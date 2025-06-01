@@ -8,8 +8,9 @@ set(CMAKE_ASM_NASM_FLAGS "-g -F dwarf")
 # fuentes
 set(SOURCES
     src/display_image.cpp
-    src/asm_functions.asm
+    src/procesarImagen.asm
     src/valorRGBLineal.asm
+    src/valorYComprimido.asm
 )
 
 # buscar OpenCV

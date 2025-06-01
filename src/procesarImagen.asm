@@ -1,5 +1,7 @@
 section .text
-global procesarImagen, valorRGBlineal, valorYcomprimido
+global procesarImagen
+extern valorYcomprimido
+extern valorRGBlineal
 
 ; --- constantes ---
 %define PUNTERO_IMAGEN    rdi   ; registro con la direccion de los datos de la imagen

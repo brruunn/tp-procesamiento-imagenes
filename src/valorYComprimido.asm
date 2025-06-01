@@ -14,9 +14,57 @@
 ; }
 
 global valorYcomprimido
+extern pow
 
 section .data
-section .bss
+    umbralLineal        dq 0.0031308
+    multiplicadorLineal dq 12.92
+    cteA                dq 0.416666667 ; 1 / 2.4
+    cteB                dq 1.055
+    correccion           dq -0.055
+
 section .text
 valorYcomprimido:
+    ; cargamos en registro el pasado por parametro
+    CVTSI2SD xmm0,rdi ; rdi viene como entero
+    ; cargamos en registro la constante para comparar
+    CVTSI2SD xmm1,[umbralLineal]
+
+    ; comparamos
+    comisd xmm0,xmm1
+    ; Si RGBComprimido >= cte. saltamos a el proceso debido
+    jge no_acotado
+
+acotado:
+    ; resultado = RGBComprimido * 12.92
+    CVTSI2SD xmm1,[multiplicadorLineal]
+
+    mulsd xmm0,xmm1
+
+    jmp fin
+
+no_acotado:
+    ; a = pow(valorYlineal,(1/2.4));
+    movsd xmm1,[cteA]
+
+    sub rsp,8 ; alineo el stack
+    call pow
+    add rsp,8 ; devuelvo el stack a su posicion
+
+
+    ; b = 1.055 * a;
+    movsd xmm1,[cteB]
+
+    mulsd xmm1,xmm0
+
+    ; resultado =  b - 0.055;
+    movsd xmm0,[correccion]
+    subsd xmm1,xmm0
+
+    ; muevo xmm1 a xmm0 para ser usado en ret
+    movsd xmm0,xmm1
+fin:
+    ; cargamos en el debido registro el numero de xmm0
+    CVTSD2SI rax,xmm0
+
     ret
