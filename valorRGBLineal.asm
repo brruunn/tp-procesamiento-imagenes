@@ -14,8 +14,7 @@
 ; }
 
 global valorRGBlineal
-
-external pow
+extern pow
 
 section .data
     ; constantes
@@ -25,19 +24,13 @@ section .data
     cteEscalaA          dq 1.055    ; PD
     correcionGamma      dq 2.4      ; PD
 
-section .bss
-    ; variables
-    resultado   dq  ; PD
-    a           dq  ; PD
-    b           dq  ; PD
-
 section .text
 
 valorRGBlineal:
     ; cargamos en registro el pasado por parametro
     CVTSI2SD xmm0,rdi ; rdi viene como entero
     ; cargamos en registro la constante para comparar
-    CVTSI2SD xmm1,[cte_limite_componente_rgb]
+    CVTSI2SD xmm1,[umbralDeCompresion]
 
     ; comparamos
     comisd xmm0,xmm1
@@ -46,11 +39,11 @@ valorRGBlineal:
 
 acotado:
     ; resultado = RGBComprimido / 12.92
-    CVTSI2SD xmm1,[cte_doce]
+    CVTSI2SD xmm1,[divisorLineal]
 
     divsd xmm0,xmm1
 
-    j fin
+    jmp fin
 
 no_acotado:
     ; a = (RGBcomprimido+0.055);
