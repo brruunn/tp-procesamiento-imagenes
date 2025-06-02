@@ -8,7 +8,7 @@ set(CMAKE_ASM_NASM_FLAGS "-g -F dwarf")
 # fuentes
 set(SOURCES
     displayImage.cpp
-    # src/procesarImagen.asm
+    procesarImagen.asm
     valorRGBLineal.asm
     valorYComprimido.asm
 )

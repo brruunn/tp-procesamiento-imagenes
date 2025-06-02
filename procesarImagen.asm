@@ -17,6 +17,10 @@ section .data
 const_255:          dq 255.0    ; para normalizar valores
 max_pixel_value:    dd 255      ; valor maximo de un pixel
 min_pixel_value:    dd 0        ; valor minimo
+; AGREGADO: definiciones que faltaban
+const_coef_R:       dq 0.2126
+const_coef_G:       dq 0.7152
+const_coef_B:       dq 0.0722
 
 section .text
 

@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
 using namespace cv;
 
 #define FLOAT_TO_INT(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
