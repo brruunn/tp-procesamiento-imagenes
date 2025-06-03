@@ -3,3 +3,5 @@ build/
 compile.sh
 *.o
 *.lst
+build/
+build

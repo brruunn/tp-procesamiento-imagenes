@@ -27,10 +27,9 @@ section .data
 section .text
 
 valorRGBlineal:
-    ; cargamos en registro el pasado por parametro
-    CVTSI2SD xmm0,rdi ; rdi viene como entero
+    ; CAMBIO: xmm0 ya tiene el valor como double, no rdi como entero
     ; cargamos en registro la constante para comparar
-    CVTSI2SD xmm1,[umbralDeCompresion]
+    movsd xmm1,[umbralDeCompresion]
 
     ; comparamos
     comisd xmm0,xmm1
@@ -39,7 +38,7 @@ valorRGBlineal:
 
 acotado:
     ; resultado = RGBComprimido / 12.92
-    CVTSI2SD xmm1,[divisorLineal]
+    movsd xmm1,[divisorLineal]
 
     divsd xmm0,xmm1
 
@@ -58,17 +57,15 @@ no_acotado:
     sub rsp,8 ; alineo el stack
     ; resultado = pow(b,(2.4));
 
-    ; transformo xmm0 a entero para ponerlo en rdi
-    ; transformo 2.4 a entero para ponerlo en rsi
+    ; CAMBIO: parámetros para pow van en xmm0 y xmm1, no rdi/rsi
+    movsd xmm1,[correcionGamma]
 
     call pow
 
     add rsp,8 ; devuelvo el stack a su posicion
 
-    ; resultado en rax, pasarlo a xmm0
+    ; CAMBIO: resultado en xmm0, no necesita conversion a rax
 
 fin:
-    ; cargamos en el debido registro el numero de xmm0
-    CVTSD2SI rax,xmm0
-
+    ; CAMBIO: resultado ya esta en xmm0, no convertir a entero
     ret

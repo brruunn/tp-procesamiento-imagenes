@@ -21,14 +21,13 @@ section .data
     multiplicadorLineal dq 12.92
     cteA                dq 0.416666667 ; 1 / 2.4
     cteB                dq 1.055
-    correccion           dq -0.055
+    correccion           dq 0.055
 
 section .text
 valorYcomprimido:
-    ; cargamos en registro el pasado por parametro
-    CVTSI2SD xmm0,rdi ; rdi viene como entero
+    ; CAMBIO: xmm0 ya tiene el valor como double, no rdi como entero
     ; cargamos en registro la constante para comparar
-    CVTSI2SD xmm1,[umbralLineal]
+    movsd xmm1,[umbralLineal]
 
     ; comparamos
     comisd xmm0,xmm1
@@ -37,7 +36,7 @@ valorYcomprimido:
 
 acotado:
     ; resultado = RGBComprimido * 12.92
-    CVTSI2SD xmm1,[multiplicadorLineal]
+    movsd xmm1,[multiplicadorLineal]
 
     mulsd xmm0,xmm1
 
@@ -55,16 +54,12 @@ no_acotado:
     ; b = 1.055 * a;
     movsd xmm1,[cteB]
 
-    mulsd xmm1,xmm0
+    mulsd xmm0,xmm1
 
     ; resultado =  b - 0.055;
-    movsd xmm0,[correccion]
-    subsd xmm1,xmm0
+    movsd xmm1,[correccion]
+    subsd xmm0,xmm1
 
-    ; muevo xmm1 a xmm0 para ser usado en ret
-    movsd xmm0,xmm1
 fin:
-    ; cargamos en el debido registro el numero de xmm0
-    CVTSD2SI rax,xmm0
-
+    ; CAMBIO: resultado ya está en xmm0, no convertir a entero
     ret
