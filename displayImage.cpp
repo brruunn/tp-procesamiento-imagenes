@@ -7,7 +7,7 @@ using namespace cv;
 
 #define FLOAT_TO_INT(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
 
-int procesarImagen(uchar* p, int nRows, int nCols, int channels);
+extern "C" int procesarImagen(uchar* p, int nRows, int nCols, int channels);
 extern "C" double valorRGBlineal (double RGBcomprimido);
 extern "C" double valorYcomprimido (double valorYlineal);
 
@@ -18,6 +18,7 @@ int main (int argc, char** argv) {
 	int channels;
 	int nRows;
 	int nCols;
+	
 
 	if (argc != 2) {
 		printf ("Uso:  testopencv <imagen>\n");
@@ -36,6 +37,7 @@ int main (int argc, char** argv) {
 	nRows = image.rows;
 	nCols = image.cols;
 	p = image.data;
+	
 
 	printf ("CTRL+C para finalizar\n\n");
 	printf ("Filas: %d\n", nRows);
@@ -44,7 +46,8 @@ int main (int argc, char** argv) {
 	CV_Assert(image.depth() == CV_8U);
 
 	// Procesamiento
-	resultado = procesarImagen (p, nRows, nCols, channels);
+	resultado = procesarImagen(p, nRows, nCols, channels);
+
 
 	namedWindow ("Grayscale", WINDOW_AUTOSIZE);
 	imshow ("Grayscale", image);
@@ -53,33 +56,4 @@ int main (int argc, char** argv) {
 	return (0);
 }
 
-int procesarImagen(uchar* p, int nRows, int nCols, int channels) {
 
-	int i,j;
-	double valorR, valorG, valorB; // valores RGB en rango 0..1
-	double Rlineal, Glineal, Blineal; // El array esta ordenado como BGR
-	double Ylineal, Yrgb;
-
-	for (i=0; i < nRows; i++) {
-		for (j=0; j < nCols*channels; j+=3) {
-			// B
-			valorB = (((double)(*(p+j+i*nCols*channels)))/255.0);
-			Blineal = valorRGBlineal (valorB);
-			// G
-			valorG = (((double)(*(p+j+i*nCols*channels+1)))/255.0);
-			Glineal = valorRGBlineal (valorG);
-			// R
-			valorR = (((double)(*(p+j+i*nCols*channels+2)))/255.0);
-			Rlineal = valorRGBlineal (valorR);
-			// Y lineal
-			Ylineal = 0.2126*Rlineal + 0.7152*Glineal + 0.0722*Blineal;
-			// Y comprimido
-			Yrgb = 255 * valorYcomprimido (Ylineal);
-			// RGB grayscale
-			*(p+j+i*nCols*channels) = FLOAT_TO_INT((Yrgb));
-			*(p+j+i*nCols*channels+1) = FLOAT_TO_INT((Yrgb));
-			*(p+j+i*nCols*channels+2) = FLOAT_TO_INT((Yrgb));
-		}
-	}
-	return (0);
-}

@@ -3,28 +3,20 @@ global procesarImagen
 extern valorYcomprimido
 extern valorRGBlineal
 
-; --- constantes ---
-%define PUNTERO_IMAGEN    rdi   ; registro con la direccion de los datos de la imagen
-%define NUM_FILAS         rsi   ; numero de filas de la imagen
-%define NUM_COLUMNAS      rdx   ; numero de columnas
-%define NUM_CANALES       rcx   ; numero de canales (3 para BGR)
-
-%define COEF_R      0.2126      ; coeficiente para el canal R
-%define COEF_G      0.7152      ; coeficiente para el canal G
-%define COEF_B      0.0722      ; coeficiente para el canal B
-
+; constantes
 section .data
-const_255:          dq 255.0    ; para normalizar valores
-max_pixel_value:    dd 255      ; valor maximo de un pixel
-min_pixel_value:    dd 0        ; valor minimo
-; AGREGADO: definiciones que faltaban
-const_coef_R:       dq 0.2126
-const_coef_G:       dq 0.7152
-const_coef_B:       dq 0.0722
+const_255: dq 255.0
+const_coef_R: dq 0.2126
+const_coef_G: dq 0.7152
+const_coef_B: dq 0.0722
 
 section .text
-
-;funcion principal que recorre la imagen y llama a procesarPixel para cada pixel.
+; parámetros:
+;   rdi = puntero imagen
+;   rsi = filas
+;   rdx = columnas
+;   rcx = canales
+;   r8  = ancho total de cada fila en bytes
 procesarImagen:
     push rbp
     mov rbp, rsp
@@ -33,45 +25,62 @@ procesarImagen:
     push r13
     push r14
     push r15
-
-    ; inicializar contador de filas
-    xor r8, r8                 ; r8 = indice de fila
+    
+    ; guardar parámetros
+    mov r12, rdi   ; puntero imagen
+    mov r13, rsi   ; filas
+    mov r14, rdx   ; columnas
+    mov rax, r14   ; columnas
+    imul rax, rcx  ; * canales
+    mov r15, rax   ; ancho útil = columnas * canales
+    
+    ; calcular ancho útil (columnas * canales)
+    mov rax, rdx   ; columnas
+    imul rax, rcx  ; * canales
+    mov r11, rax   ; r11 = ancho útil (límite para j)
+    
+    xor r8, r8     ; i = 0 (contador filas)
 
 bucle_filas:
-    cmp r8, NUM_FILAS
-    jge fin_bucle_filas
-
-    ; calcular desplazamiento de la fila
+    cmp r8, r13
+    jge fin_procesamiento
+    
+    ; calcular dirección inicial de fila: imagen + i * ancho_total_fila
     mov rax, r8
-    imul rax, NUM_COLUMNAS
-    imul rax, 3
-    mov r9, rax                
-
-    ; inicializar contador de columnas (j = 0)
-    xor r10, r10              ; r10 = indice de columna
+    imul rax, r15   ; i * ancho total de la fila
+    lea r10, [r12 + rax] ; r10 = inicio fila actual
+    
+    xor r9, r9      ; j = 0 (posición en la fila)
 
 bucle_columnas:
-    cmp r10, NUM_COLUMNAS
+    cmp r9, r11     ; ¿j < ancho útil?
     jge fin_bucle_columnas
-
-    ; calcular direccion del pixel actual
-    mov rax, r10
-    imul rax, 3
-    add rax, r9
-    lea r11, [PUNTERO_IMAGEN + rax] ; r11 = direccion del pixel
-
-    ; --- llamar a procesarPixel ---
+    
+    ; dirección del píxel: inicio fila + posición
+    lea rbx, [r10 + r9] ; rbx = dirección píxel actual
+    
+    ; procesar píxel (preservar registros)
+    push r8
+    push r9
+    push r10
+    push r11
+    mov rdi, rbx    ; pasar dirección del píxel
     call procesarPixel
-
-    ; Avanzar a la siguiente columna
-    inc r10
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    
+    add r9, 3       ; avanzar al siguiente píxel (3 bytes: BGR)
     jmp bucle_columnas
 
 fin_bucle_columnas:
-    inc r8
+    inc r8          ; siguiente fila
     jmp bucle_filas
 
-fin_bucle_filas:
+fin_procesamiento:
+    mov rax, 0      ; retornar 0 (éxito)
+    
     pop r15
     pop r14
     pop r13
@@ -80,57 +89,96 @@ fin_bucle_filas:
     leave
     ret
 
-; procesa un pixel individual (dirección en r11) y xonvierte sus componentes BGR a escala de grises
 procesarPixel:
-    ; guardar registros que se van a modificar
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32     ; espacio para 3 doubles (24 bytes) + alineación
     push rbx
     push r12
+    push r13
+    push r14
+    push r15
+    
+    ; guardar dirección del píxel
+    mov [rbp - 32], rdi
+    
+    ; --- leer componentes en orden BGR ---
+    movzx eax, byte [rdi]      ; B
+    movzx ebx, byte [rdi + 1]  ; G
+    movzx ecx, byte [rdi + 2]  ; R
 
-    ; --- convertir B, G, R a valores lineales ---
-
-    ; procesar B (primer byte)
-    movzx ebx, byte [r11]       ; cargar valor B
+    ; --- convertir B a lineal ---
+    cvtsi2sd xmm0, eax
+    divsd xmm0, [const_255]
+    call valorRGBlineal
+    movsd [rbp - 8], xmm0 ; guardar B_lineal
+    
+    ; --- convertir G a lineal ---
     cvtsi2sd xmm0, ebx
     divsd xmm0, [const_255]
-    call valorRGBlineal          ; xmm0 = B_lineal
-
-    ; procesar G (segundo byte)
-    movzx r12d, byte [r11 + 1]  ; cargar valor G
-    cvtsi2sd xmm1, r12d
-    divsd xmm1, [const_255]
-    call valorRGBlineal          ; xmm1 = G_lineal
-
-    ; procesar R (tercer byte)
-    movzx eax, byte [r11 + 2]   ; cargar valor R
-    cvtsi2sd xmm2, eax
-    divsd xmm2, [const_255]
-    call valorRGBlineal          ; xmm2 = R_lineal
-
-    ; --- calcular Y_lineal --- formula: Y = 0.2126*R + 0.7152*G + 0.0722*B
-    mulsd xmm2, [const_coef_R]  ; R * 0.2126
-    mulsd xmm1, [const_coef_G]  ; G * 0.7152
-    mulsd xmm0, [const_coef_B]  ; B * 0.0722
-    addsd xmm2, xmm1
-    addsd xmm2, xmm0            ; xmm2 = Y_lineal
-
-    ; calcular Y_comprimido
-    movsd xmm0, xmm2
-    call valorYcomprimido        ; xmm0 = Ysrgb (0-1)
-    mulsd xmm0, [const_255]     ; escalar a 0-255
-
-    ; convertir a entero
-    cvtsd2si eax, xmm0
+    call valorRGBlineal
+    movsd [rbp - 16], xmm0 ; guardar G_lineal
+    
+    ; --- convertir R a lineal ---
+    cvtsi2sd xmm0, ecx
+    divsd xmm0, [const_255]
+    call valorRGBlineal
+    movsd [rbp - 24], xmm0 ; guardar R_lineal
+    
+    ; --- calcular Y_lineal ---
+    ; Y = 0.2126*R + 0.7152*G + 0.0722*B
+    movsd xmm0, [rbp - 24] ; R_lineal
+    mulsd xmm0, [const_coef_R]
+    movsd xmm1, [rbp - 16] ; G_lineal
+    mulsd xmm1, [const_coef_G]
+    movsd xmm2, [rbp - 8]  ; B_lineal
+    mulsd xmm2, [const_coef_B]
+    addsd xmm0, xmm1
+    addsd xmm0, xmm2 ; xmm0 = Y_lineal
+    
+    ; --- calcular Y_comprimido ---
+    call valorYcomprimido
+    mulsd xmm0, [const_255] ; escalar a 0-255
+    
+    ; --- convertir a entero con redondeo ---
+    cvttsd2si eax, xmm0   ; convertir con truncamiento
+    
+    ; redondeo
+    mov edx, eax
+    cvtsi2sd xmm1, edx
+    subsd xmm0, xmm1
+    comisd xmm0, [const_0_5]
+    jb .no_redondear
+    inc eax
+    
+.no_redondear:
+    ; asegurar rango 0-255
     cmp eax, 255
-    cmovg eax, [max_pixel_value]
+    jle .verificar_minimo
+    mov eax, 255
+    jmp .guardar_pixel
+
+.verificar_minimo:
     cmp eax, 0
-    cmovl eax, [min_pixel_value]
-
-    ; actualizar píxel
-    mov byte [r11], al          ; canal B
-    mov byte [r11 + 1], al      ; canal G
-    mov byte [r11 + 2], al      ; canal R
-
-    ; restaurar registros y retornar
+    jge .guardar_pixel
+    mov eax, 0
+    
+.guardar_pixel:
+    ; recuperar dirección del píxel
+    mov r11, [rbp - 32]
+    
+    ; actualizar píxel (BGR -> escala de grises)
+    mov byte [r11], al     ; B
+    mov byte [r11 + 1], al ; G
+    mov byte [r11 + 2], al ; R
+    
+    pop r15
+    pop r14
+    pop r13
     pop r12
     pop rbx
+    leave
     ret
+
+section .data
+const_0_5: dq 0.5
