@@ -9,14 +9,14 @@ const_255: dq 255.0
 const_coef_R: dq 0.2126
 const_coef_G: dq 0.7152
 const_coef_B: dq 0.0722
+const_0_5: dq 0.5
 
 section .text
 ; parámetros:
 ;   rdi = puntero imagen
 ;   rsi = filas
 ;   rdx = columnas
-;   rcx = canales
-;   r8  = ancho total de cada fila en bytes
+;   rcx = canales (siempre 3)
 procesarImagen:
     push rbp
     mov rbp, rsp
@@ -30,14 +30,12 @@ procesarImagen:
     mov r12, rdi   ; puntero imagen
     mov r13, rsi   ; filas
     mov r14, rdx   ; columnas
-    mov rax, r14   ; columnas
-    imul rax, rcx  ; * canales
-    mov r15, rax   ; ancho útil = columnas * canales
+    mov r15, rcx   ; canales (3)
     
-    ; calcular ancho útil (columnas * canales)
-    mov rax, rdx   ; columnas
-    imul rax, rcx  ; * canales
-    mov r11, rax   ; r11 = ancho útil (límite para j)
+    ; calcular ancho útil por fila en bytes (columnas * canales)
+    mov rax, r14   ; columnas
+    imul rax, r15  ; * canales
+    mov r11, rax   ; r11 = bytes por fila
     
     xor r8, r8     ; i = 0 (contador filas)
 
@@ -45,15 +43,15 @@ bucle_filas:
     cmp r8, r13
     jge fin_procesamiento
     
-    ; calcular dirección inicial de fila: imagen + i * ancho_total_fila
+    ; calcular dirección inicial de fila: imagen + i * bytes_por_fila
     mov rax, r8
-    imul rax, r15   ; i * ancho total de la fila
+    imul rax, r11   ; i * bytes por fila
     lea r10, [r12 + rax] ; r10 = inicio fila actual
     
-    xor r9, r9      ; j = 0 (posición en la fila)
+    xor r9, r9      ; j = 0 (posición en la fila, incrementa de 3 en 3)
 
 bucle_columnas:
-    cmp r9, r11     ; ¿j < ancho útil?
+    cmp r9, r11     ; ¿j < bytes por fila?
     jge fin_bucle_columnas
     
     ; dirección del píxel: inicio fila + posición
@@ -141,17 +139,9 @@ procesarPixel:
     mulsd xmm0, [const_255] ; escalar a 0-255
     
     ; --- convertir a entero con redondeo ---
-    cvttsd2si eax, xmm0   ; convertir con truncamiento
+    addsd xmm0, [const_0_5]  ; agregar 0.5 para redondeo
+    cvttsd2si eax, xmm0      ; convertir con truncamiento
     
-    ; redondeo
-    mov edx, eax
-    cvtsi2sd xmm1, edx
-    subsd xmm0, xmm1
-    comisd xmm0, [const_0_5]
-    jb .no_redondear
-    inc eax
-    
-.no_redondear:
     ; asegurar rango 0-255
     cmp eax, 255
     jle .verificar_minimo
@@ -179,6 +169,3 @@ procesarPixel:
     pop rbx
     leave
     ret
-
-section .data
-const_0_5: dq 0.5
