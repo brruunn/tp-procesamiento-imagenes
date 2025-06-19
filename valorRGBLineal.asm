@@ -33,8 +33,8 @@ valorRGBlineal:
 
     ; comparamos
     comisd xmm0,xmm1
-    ; Si RGBComprimido >= cte. saltamos a el proceso debido
-    jge no_acotado
+    ; Si RGBcomprimido >= umbral, saltamos a no_acotado
+    jae no_acotado
 
 acotado:
     ; resultado = RGBComprimido / 12.92
