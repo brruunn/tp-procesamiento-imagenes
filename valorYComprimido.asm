@@ -19,7 +19,7 @@ extern pow
 section .data
     umbralLineal        dq 0.0031308
     multiplicadorLineal dq 12.92
-    cteA                dq 0.416666667 ; 1 / 2.4
+    cteA                dq 0.41666666666666669 ; 1 / 2.4 con mayor precisión
     cteB                dq 1.055
     correccion           dq 0.055
 
@@ -31,8 +31,8 @@ valorYcomprimido:
 
     ; comparamos
     comisd xmm0,xmm1
-    ; Si RGBComprimido >= cte. saltamos a el proceso debido
-    jge no_acotado
+    ; Si valorYlineal >= umbral, saltamos a no_acotado
+    jae no_acotado
 
 acotado:
     ; resultado = RGBComprimido * 12.92
